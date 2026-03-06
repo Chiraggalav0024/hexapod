@@ -15,7 +15,8 @@ int directPins[NUM_DIRECT_SERVOS] = {2,3,4,5,8,9};
 
 int currentAngle[TOTAL_SERVOS];
 
-// -------- STAND NEUTRAL --------
+// ======== POSES ========
+
 int standneutral[TOTAL_SERVOS] = {
 90,96,90,118,
 96,90,119,80,
@@ -25,7 +26,27 @@ int standneutral[TOTAL_SERVOS] = {
 56,90
 };
 
-// -------- SERVO WRITE --------
+int halfstand[TOTAL_SERVOS] = {
+124,79,110,74,
+125,107,63,131,
+101,63,135,90,
+143,53,90,173,
+47,81,74,93,
+96,90
+};
+
+int fullstand[TOTAL_SERVOS] = {
+20,158,110,169,
+39,98,160,40,
+102,167,51,90,
+40,154,93,61,
+146,81,74,93,
+96,90
+};
+
+
+// ======== SERVO WRITE ========
+
 uint16_t angleToPulse(int angle){
   return map(angle,0,180,SERVOMIN,SERVOMAX);
 }
@@ -40,7 +61,9 @@ void writeServo(int id,int angle){
     directServos[id-16].write(angle);
 }
 
-// -------- SIMULTANEOUS MOVE --------
+
+// ======== SIMULTANEOUS MOVE ========
+
 void moveSim(int ids[], int targets[], int count){
 
   bool moving = true;
@@ -69,96 +92,59 @@ void moveSim(int ids[], int targets[], int count){
   }
 }
 
-// -------- MOVE TO STAND --------
-void moveToStand(){
+
+// ======== MOVE TO POSE ========
+
+void moveToPose(int pose[]){
+
+  int ids[TOTAL_SERVOS];
+  int targets[TOTAL_SERVOS];
 
   for(int i=0;i<TOTAL_SERVOS;i++){
-    currentAngle[i] = standneutral[i];
-    writeServo(i,currentAngle[i]);
+    ids[i] = i;
+    targets[i] = pose[i];
   }
+
+  moveSim(ids,targets,TOTAL_SERVOS);
 }
 
-// -------- WALK CYCLE --------
-void walkCycle(bool backward, bool finalCycle){
+
+// ======== WALK ENGINE ========
+
+void walkCycle(int pose[], bool backward, bool finalCycle){
 
   int dir = backward ? -1 : 1;
 
-  // PHASE 1 (lift tripod A)
   int s1[] = {1,7,13};
-  int t1[] = {
-    standneutral[1]-40,
-    standneutral[7]+40,
-    standneutral[13]-40
-  };
+  int t1[] = {pose[1]-40,pose[7]+40,pose[13]-40};
   moveSim(s1,t1,3);
-  delay(120);
 
-  // PHASE 2 (swing A)
- int s2[] = {2,8,14};
-int t2[] = {
-  standneutral[2]-30*dir,
-  standneutral[8]-30*dir,
-  standneutral[14]+30*dir
-};
+  int s2[] = {2,8,14};
+  int t2[] = {pose[2]-30*dir,pose[8]-30*dir,pose[14]+30*dir};
   moveSim(s2,t2,3);
-  delay(120);
 
-  // PHASE 3 (place A)
   int s3[] = {1,7,13};
-  int t3[] = {
-    standneutral[1],
-    standneutral[7],
-    standneutral[13]
-  };
+  int t3[] = {pose[1],pose[7],pose[13]};
   moveSim(s3,t3,3);
-  delay(120);
 
-  // PHASE 4
   int s4[] = {2,8,14,4,10,16};
-  int t4[] = {
-    standneutral[2],
-    standneutral[8],
-    standneutral[14],
-    standneutral[4]+40,
-    standneutral[10]+40,
-    standneutral[16]-40
-  };
+  int t4[] = {pose[2],pose[8],pose[14],pose[4]+40,pose[10]+40,pose[16]-40};
   moveSim(s4,t4,6);
-  delay(120);
 
-  // PHASE 5
- int s5[] = {5,11,17};
-int t5[] = {
-  standneutral[5]-30*dir,
-  standneutral[11]+30*dir,   // reversed
-  standneutral[17]+30*dir
-};
+  int s5[] = {5,11,17};
+  int t5[] = {pose[5]-30*dir,pose[11]+30*dir,pose[17]+30*dir};
   moveSim(s5,t5,3);
-  delay(120);
 
-  // PHASE 6
   int s6[] = {4,10,16};
-  int t6[] = {
-    standneutral[4],
-    standneutral[10],
-    standneutral[16]
-  };
+  int t6[] = {pose[4],pose[10],pose[16]};
   moveSim(s6,t6,3);
-  delay(120);
 
-  // PHASE 7
   if(!finalCycle){
 
     int s7[] = {5,11,17,1,7,13};
-
     int t7[] = {
-      standneutral[5],
-      standneutral[11],
-      standneutral[17],
-
-      standneutral[1]-40,
-      standneutral[7]+40,
-      standneutral[13]-40
+      pose[5],pose[11],pose[17],
+      pose[1]-40,pose[7]+40,pose[13]-40
     };
 
     moveSim(s7,t7,6);
@@ -166,36 +152,41 @@ int t5[] = {
   else{
 
     int s7[] = {5,11,17};
-
-    int t7[] = {
-      standneutral[5],
-      standneutral[11],
-      standneutral[17]
-    };
-
+    int t7[] = {pose[5],pose[11],pose[17]};
     moveSim(s7,t7,3);
   }
 
   delay(200);
 }
 
-// -------- FORWARD WALK --------
-void forwardWalk(){
 
-  walkCycle(false,false);
-  walkCycle(false,false);
-  walkCycle(false,true);
+// ======== WALK MODES ========
+
+void forwardWalk(int pose[]){
+
+  moveToPose(pose);
+
+  walkCycle(pose,false,false);
+  walkCycle(pose,false,false);
+  walkCycle(pose,false,true);
+
+  moveToPose(pose);
 }
 
-// -------- BACKWARD WALK --------
-void backwardWalk(){
+void backwardWalk(int pose[]){
 
-  walkCycle(true,false);
-  walkCycle(true,false);
-  walkCycle(true,true);
+  moveToPose(pose);
+
+  walkCycle(pose,true,false);
+  walkCycle(pose,true,false);
+  walkCycle(pose,true,true);
+
+  moveToPose(pose);
 }
 
-// -------- SETUP --------
+
+// ======== SETUP ========
+
 void setup(){
 
   Serial.begin(115200);
@@ -208,13 +199,14 @@ void setup(){
 
   delay(1000);
 
-  moveToStand();
+  moveToPose(standneutral);
 
   Serial.println("Hexapod Ready");
-  Serial.println("Type: fmove or bmove");
 }
 
-// -------- LOOP --------
+
+// ======== LOOP ========
+
 void loop(){
 
   if(Serial.available()){
@@ -222,15 +214,13 @@ void loop(){
     String cmd = Serial.readStringUntil('\n');
     cmd.trim();
 
-    if(cmd == "fmove"){
-      Serial.println("Forward Move");
-      forwardWalk();
-    }
+    if(cmd=="fmove") forwardWalk(standneutral);
+    if(cmd=="bmove") backwardWalk(standneutral);
 
-    else if(cmd == "bmove"){
-      Serial.println("Backward Move");
-      backwardWalk();
-    }
+    if(cmd=="fmove0") forwardWalk(halfstand);
+    if(cmd=="bmove0") backwardWalk(halfstand);
 
+    if(cmd=="fmove1") forwardWalk(fullstand);
+    if(cmd=="bmove1") backwardWalk(fullstand);
   }
 }
