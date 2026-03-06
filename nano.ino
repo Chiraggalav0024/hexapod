@@ -1,0 +1,214 @@
+// =====================================================
+// HEXAPOD 22 SERVO SMOOTH FIRMWARE (FINAL CLEAN)
+// Default Pose: standneutral
+// =====================================================
+
+#include <Wire.h>
+#include <Adafruit_PWMServoDriver.h>
+#include <Servo.h>
+
+#define TOTAL_SERVOS 22
+#define NUM_DIRECT_SERVOS 6
+
+#define SERVOMIN 110
+#define SERVOMAX 490
+
+Adafruit_PWMServoDriver pca = Adafruit_PWMServoDriver(0x40);
+Servo directServos[NUM_DIRECT_SERVOS];
+
+int directPins[NUM_DIRECT_SERVOS] = {2,3,4,5,8,9};
+
+// ================= STRUCT =================
+struct Pose {
+  const char* name;
+  int angle[TOTAL_SERVOS];
+};
+
+// ================= POSES =================
+
+Pose halfstand = {
+  "halfstand",
+  {124,79,110,74,125,107,63,131,
+   101,63,135,90,143,53,90,173,
+   47,81,74,93,96,90}
+};
+
+Pose fullstand = {
+  "fullstand",
+  {20,158,110,169,39,98,160,40,
+   102,167,51,90,40,154,93,61,
+   146,81,74,93,96,90}
+};
+
+Pose fullsit = {
+  "fullsit",
+  {156,95,63,41,106,90,50,96,
+   155,53,93,131,139,128,90,173,
+   109,39,74,93,96,90}
+};
+
+Pose standneutral = {
+  "standneutral",
+  {90,96,90,118,
+   96,90,119,80,
+   90,114,94,90,
+   77,120,90,90,
+   129,90,49,98,
+   56,90}
+};
+
+Pose* POSES[] = { &halfstand, &fullstand, &fullsit, &standneutral };
+const uint8_t POSE_COUNT = 4;
+
+// ============== CURRENT POSITION ==========
+int currentAngle[TOTAL_SERVOS];
+
+// ============== FUNCTIONS =================
+uint16_t angleToPulse(int angle) {
+  return map(angle, 0, 180, SERVOMIN, SERVOMAX);
+}
+
+void writeServo(uint8_t id, int angle) {
+  if (id < 16) {
+    pca.setPWM(id, 0, angleToPulse(angle));
+  } else {
+    directServos[id - 16].write(angle);
+  }
+}
+
+void moveToPose(Pose &p, uint16_t speedDelay) {
+
+  bool moving = true;
+
+  while (moving) {
+    moving = false;
+
+    for (uint8_t i = 0; i < TOTAL_SERVOS; i++) {
+
+      if (currentAngle[i] < p.angle[i]) {
+        currentAngle[i]++;
+        writeServo(i, currentAngle[i]);
+        moving = true;
+      }
+      else if (currentAngle[i] > p.angle[i]) {
+        currentAngle[i]--;
+        writeServo(i, currentAngle[i]);
+        moving = true;
+      }
+    }
+
+    delay(speedDelay);
+  }
+}
+
+// ================= HI MOTION =================
+void hiMotion() {
+
+  moveToPose(standneutral, 8);
+
+  // Smooth move servo 1 to 30
+  for (int a = currentAngle[1]; a >= 30; a--) {
+    writeServo(1, a);
+    delay(15);
+  }
+  currentAngle[1] = 30;
+
+  // 🔹 Extra movement for SERVO 18 (slow)
+  int target18 = currentAngle[18] - 50;   // adjust movement range
+  target18 = constrain(target18, 0, 180);
+
+  for (int a = currentAngle[18]; a <= target18; a++) {
+    writeServo(18, a);
+    delay(10);      // slower speed
+  }
+  currentAngle[18] = target18;
+
+  // Wave servo 0
+  for (int i = 0; i < 2; i++) {
+
+    for (int a = 60; a <= 120; a++) {
+      writeServo(0, a);
+      delay(10);
+    }
+
+    for (int a = 120; a >= 60; a--) {
+      writeServo(0, a);
+      delay(10);
+    }
+  }
+
+  // Return smoothly to standneutral
+  moveToPose(standneutral, 8);
+}
+
+// ================= HELP =================
+void printHelp() {
+  Serial.println("\nAvailable commands:");
+  for (uint8_t i = 0; i < POSE_COUNT; i++) {
+    Serial.print(" - ");
+    Serial.println(POSES[i]->name);
+  }
+  Serial.println(" - hi");
+  Serial.println(" - help");
+}
+
+// ================= SETUP =================
+void setup() {
+
+  Serial.begin(115200);
+  Serial.setTimeout(10);
+
+  pca.begin();
+  pca.setPWMFreq(50);
+
+  for (int i = 0; i < NUM_DIRECT_SERVOS; i++) {
+    directServos[i].attach(directPins[i]);
+  }
+
+  for (int i = 0; i < TOTAL_SERVOS; i++) {
+    currentAngle[i] = 90;
+    writeServo(i, 90);
+  }
+
+  delay(1000);
+
+  moveToPose(standneutral, 8);
+
+  Serial.println("Hexapod Ready (StandNeutral Default)");
+  printHelp();
+}
+
+// ================= LOOP ==================
+void loop() {
+
+  if (Serial.available()) {
+
+    String cmd = Serial.readStringUntil('\n');
+    cmd.trim();
+
+    if (cmd.equalsIgnoreCase("help")) {
+      printHelp();
+      return;
+    }
+
+    if (cmd.equalsIgnoreCase("hi")) {
+      hiMotion();
+      Serial.println("Pose executed: hi");
+      return;
+    }
+
+    for (uint8_t i = 0; i < POSE_COUNT; i++) {
+
+      if (cmd.equalsIgnoreCase(POSES[i]->name)) {
+
+        moveToPose(*POSES[i], 8);
+
+        Serial.print("Pose executed: ");
+        Serial.println(POSES[i]->name);
+        return;
+      }
+    }
+
+    Serial.println("Unknown command.");
+  }
+}
