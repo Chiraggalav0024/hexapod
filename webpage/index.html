@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>KrishiMitra - Dashboard</title>
+
+  <!-- Google Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', sans-serif;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background: #f8f9fa;
+    }
+
+    /* Header Styles */
+    header {
+      background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      padding: 0 40px;
+      border-bottom: 3px solid #2ecc71;
+    }
+
+    .header-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      height: 90px;
+    }
+
+    .logo {
+      font-size: 32px;
+      font-weight: 700;
+      color: #2ecc71;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      letter-spacing: -0.5px;
+    }
+
+    .logo::before {
+      content: "🌾";
+      margin-right: 12px;
+      font-size: 36px;
+    }
+
+    nav {
+      display: flex;
+      align-items: center;
+      gap: 40px;
+      flex: 1;
+      justify-content: center;
+    }
+
+    nav a {
+      text-decoration: none;
+      color: #333;
+      font-weight: 500;
+      font-size: 17px;
+      transition: all 0.3s;
+      position: relative;
+      padding: 8px 0;
+    }
+
+    nav a::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 0;
+      height: 3px;
+      background: #2ecc71;
+      transition: width 0.3s;
+    }
+
+    nav a:hover {
+      color: #2ecc71;
+    }
+
+    nav a:hover::after {
+      width: 100%;
+    }
+
+    .header-buttons {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .logout-btn {
+      padding: 12px 28px;
+      background: transparent;
+      color: #e74c3c;
+      border: 2px solid #e74c3c;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+      transition: all 0.3s;
+    }
+
+    .logout-btn:hover {
+      background: #e74c3c;
+      color: #fff;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(231, 76, 60, 0.4);
+    }
+
+    /* Dashboard Layout */
+    .dashboard-container {
+      display: flex;
+      min-height: calc(100vh - 90px);
+    }
+
+    /* Sidebar Styles */
+    .sidebar {
+      width: 280px;
+      background: #ffffff;
+      box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+      padding: 30px 0;
+      position: sticky;
+      top: 90px;
+      height: calc(100vh - 90px);
+      overflow-y: auto;
+    }
+
+    .sidebar-menu {
+      list-style: none;
+      padding: 0;
+    }
+
+    .sidebar-menu-item {
+      margin: 0;
+    }
+
+    .sidebar-menu-item a {
+      display: flex;
+      align-items: center;
+      padding: 18px 30px;
+      color: #555;
+      text-decoration: none;
+      font-size: 16px;
+      font-weight: 500;
+      transition: all 0.3s;
+      border-left: 4px solid transparent;
+    }
+
+    .sidebar-menu-item a:hover {
+      background: #f8f9fa;
+      color: #2ecc71;
+      border-left-color: #2ecc71;
+    }
+
+    .sidebar-menu-item.active a {
+      background: #f0fdf4;
+      color: #2ecc71;
+      border-left-color: #2ecc71;
+      font-weight: 600;
+    }
+
+    .sidebar-menu-item a::before {
+      content: '';
+      width: 24px;
+      height: 24px;
+      margin-right: 15px;
+      font-size: 20px;
+    }
+
+    .sidebar-menu-item:nth-child(1) a::before {
+      content: '🌱';
+    }
+
+    .sidebar-menu-item:nth-child(2) a::before {
+      content: '📜';
+    }
+
+    .sidebar-menu-item:nth-child(3) a::before {
+      content: '❓';
+    }
+
+    .sidebar-menu-item:nth-child(4) a::before {
+      content: '👤';
+    }
+
+    /* Main Content */
+    .main-content {
+      flex: 1;
+      padding: 40px;
+      background: #f8f9fa;
+    }
+
+    .content-section {
+      display: none;
+    }
+
+    .content-section.active {
+      display: block;
+    }
+
+    .section-title {
+      font-size: 36px;
+      color: #2c3e50;
+      margin-bottom: 30px;
+      font-weight: 700;
+    }
+
+    /* Product Section */
+    .selector-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 30px;
+      margin-bottom: 40px;
+    }
+
+    .selector-group {
+      background: #ffffff;
+      padding: 25px;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+
+    .selector-group label {
+      display: block;
+      font-size: 16px;
+      font-weight: 600;
+      color: #2c3e50;
+      margin-bottom: 12px;
+    }
+
+    .selector-group select {
+      width: 100%;
+      padding: 12px 16px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 15px;
+      color: #333;
+      background: #fff;
+      cursor: pointer;
+      transition: border-color 0.3s;
+    }
+
+    .selector-group select:focus {
+      outline: none;
+      border-color: #2ecc71;
+    }
+
+    /* Pump Status Section */
+    .pump-status-section {
+      background: #ffffff;
+      padding: 35px;
+      border-radius: 16px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      margin-bottom: 40px;
+    }
+
+    /* Pump control buttons */
+    .pump-control-buttons {
+      margin-top: 20px;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .pump-btn {
+      padding: 10px 18px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+
+    .pump-btn.auto {
+      background: #2ecc71;
+      color: #fff;
+    }
+
+    .pump-btn.on {
+      background: #3498db;
+      color: #fff;
+    }
+
+    .pump-btn.off {
+      background: #e74c3c;
+      color: #fff;
+    }
+
+    .pump-btn:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
+
+    /* Data Management Section */
+    .data-management {
+      margin-top: 0;
+    }
+
+    .data-management-title {
+      font-size: 24px;
+      color: #2c3e50;
+      margin-bottom: 25px;
+      font-weight: 600;
+    }
+
+    .data-collectors-list {
+      display: flex;
+      flex-direction: column;
+      gap: 25px;
+    }
+
+    .data-card {
+      background: #ffffff;
+      padding: 25px;
+      border-radius: 16px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      display: grid;
+      grid-template-columns: 200px 1fr;
+      gap: 30px;
+      align-items: center;
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+
+    .data-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+
+    .data-card-info {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+
+    .data-card-icon {
+      font-size: 48px;
+      margin-bottom: 15px;
+    }
+
+    .data-card-label {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .data-card-value {
+      font-size: 32px;
+      font-weight: 700;
+      color: #2c3e50;
+      margin-bottom: 8px;
+    }
+
+    .data-card-unit {
+      font-size: 14px;
+      color: #999;
+    }
+
+    .data-card-graph {
+      height: 120px;
+      position: relative;
+    }
+
+    .pump-status-title {
+      font-size: 24px;
+      color: #2c3e50;
+      margin-bottom: 25px;
+      font-weight: 600;
+    }
+
+    .pump-status-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 30px;
+    }
+
+    .pump-status-card {
+      padding: 25px;
+      border-radius: 12px;
+      background: #f8f9fa;
+    }
+
+    .pump-status-label {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .pump-status-value {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .pump-status-value.on {
+      color: #2ecc71;
+    }
+
+    .pump-status-value.off {
+      color: #e74c3c;
+    }
+
+    .pump-duration {
+      font-size: 18px;
+      color: #555;
+    }
+
+    /* Hidden initially */
+    .data-management.hidden {
+      display: none;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 1024px) {
+      .data-card {
+        grid-template-columns: 180px 1fr;
+      }
+
+      .selector-container {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .dashboard-container {
+        flex-direction: column;
+      }
+
+      .sidebar {
+        width: 100%;
+        height: auto;
+        position: relative;
+        top: 0;
+        display: flex;
+        overflow-x: auto;
+      }
+
+      .sidebar-menu {
+        display: flex;
+        width: 100%;
+      }
+
+      .sidebar-menu-item {
+        flex-shrink: 0;
+      }
+
+      .sidebar-menu-item a {
+        padding: 15px 20px;
+        white-space: nowrap;
+      }
+
+      .main-content {
+        padding: 20px;
+      }
+
+      .data-card {
+        grid-template-columns: 1fr;
+        gap: 20px;
+      }
+
+      .data-card-info {
+        padding-bottom: 20px;
+        border-bottom: 1px solid #e0e0e0;
+      }
+
+      .data-card-graph {
+        height: 150px;
+      }
+
+      .pump-status-container {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="header-container">
+      <a href="index.html" class="logo">KrishiMitra</a>
+      <nav>
+        <a href="index.html">Home</a>
+        <a href="#about">About</a>
+        <a href="#products">Products</a>
+        <a href="#contact">Contact</a>
+      </nav>
+      <div class="header-buttons">
+        <a href="index.html" class="logout-btn">Logout</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Dashboard Container -->
+  <div class="dashboard-container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <ul class="sidebar-menu">
+        <li class="sidebar-menu-item active">
+          <a href="#" onclick="showSection('product'); return false;">Product</a>
+        </li>
+        <li class="sidebar-menu-item">
+          <a href="#" onclick="showSection('history'); return false;">History</a>
+        </li>
+        <li class="sidebar-menu-item">
+          <a href="#" onclick="showSection('help'); return false;">Help</a>
+        </li>
+        <li class="sidebar-menu-item">
+          <a href="#" onclick="showSection('profile'); return false;">Profile</a>
+        </li>
+      </ul>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Product Section -->
+      <section id="product" class="content-section active">
+        <h1 class="section-title">Product Management</h1>
+
+        <!-- Selectors -->
+        <div class="selector-container">
+          <div class="selector-group">
+            <label for="cropSelector">Select Crop</label>
+            <select id="cropSelector" onchange="checkSelections()">
+              <option value="">-- Select Crop --</option>
+              <option value="wheat">Wheat</option>
+              <option value="rice">Rice</option>
+              <option value="corn">Cotton</option>
+              <option value="cotton">Sugarcane</option>
+              <option value="sugarcane">Tomato</option>
+              <option value="tomato">Maize</option>
+              <option value="potato">Potato</option>
+            </select>
+          </div>
+
+          <div class="selector-group">
+            <label for="locationSelector">Select Location</label>
+            <select id="locationSelector" onchange="checkSelections()">
+              <option value="">-- Select Location --</option>
+              <option value="field1">Field 1 - North Section</option>
+              <option value="field2">Field 2 - South Section</option>
+              <option value="field3">Field 3 - East Section</option>
+              <option value="field4">Field 4 - West Section</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Data Management Section (Hidden Initially) -->
+        <div id="dataManagement" class="data-management hidden">
+          <!-- Pump Status Section -->
+          <div class="pump-status-section">
+            <h2 class="pump-status-title">Pump Control System</h2>
+            <div class="pump-status-container">
+              <div class="pump-status-card">
+                <div class="pump-status-label">Pump Status</div>
+                <div class="pump-status-value" id="pumpStatus">OFF</div>
+                <div class="pump-duration" id="pumpStatusText">Currently not running</div>
+              </div>
+              <div class="pump-status-card">
+                <div class="pump-status-label">Recommended Duration</div>
+                <div class="pump-status-value" id="pumpDuration">--</div>
+                <div class="pump-duration" id="pumpDurationText">Based on current conditions</div>
+              </div>
+            </div>
+            <div class="pump-control-buttons">
+              <button class="pump-btn auto" onclick="setModeAuto()">Auto Mode</button>
+              <button class="pump-btn on" onclick="manualOn()">Manual ON</button>
+              <button class="pump-btn off" onclick="manualOff()">Manual OFF</button>
+            </div>
+          </div>
+
+          <h2 class="data-management-title">Constant Data Management System</h2>
+          
+          <!-- Data Collectors -->
+          <div class="data-collectors-list">
+            <div class="data-card">
+              <div class="data-card-info">
+                <div class="data-card-icon">🌡️</div>
+                <div class="data-card-label">Air Temperature</div>
+                <div class="data-card-value" id="airTemp">--</div>
+                <div class="data-card-unit">°C</div>
+              </div>
+              <div class="data-card-graph">
+                <canvas id="airTempChart"></canvas>
+              </div>
+            </div>
+
+            <div class="data-card">
+              <div class="data-card-info">
+                <div class="data-card-icon">💨</div>
+                <div class="data-card-label">Air Moisture</div>
+                <div class="data-card-value" id="airMoisture">--</div>
+                <div class="data-card-unit">%</div>
+              </div>
+              <div class="data-card-graph">
+                <canvas id="airMoistureChart"></canvas>
+              </div>
+            </div>
+
+            <!-- Soil Moisture -->
+<div class="data-card">
+  <div class="data-card-info">
+    <div class="data-card-icon">🌍</div>
+    <div class="data-card-label">Soil Moisture</div>
+    <div class="data-card-value" id="soilMoisture">--</div>
+    <div class="data-card-unit">%</div>
+  </div>
+  <div class="data-card-graph">
+    <canvas id="soilMoistureChart"></canvas>
+  </div>
+</div>
+
+<!-- Soil Temperature -->
+<div class="data-card">
+  <div class="data-card-info">
+    <div class="data-card-icon">🌱</div>
+    <div class="data-card-label">Soil Temperature</div>
+    <div class="data-card-value" id="soilTemp">--</div>
+    <div class="data-card-unit">°C</div>
+  </div>
+  <div class="data-card-graph">
+    <canvas id="soilTempChart"></canvas>
+  </div>
+</div> 
+              <div class="data-card-graph">
+                <canvas id="soilTempChart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- History Section -->
+      <section id="history" class="content-section">
+        <h1 class="section-title">History</h1>
+        <p style="color: #666; font-size: 18px;">Historical data and irrigation logs will be displayed here.</p>
+      </section>
+
+      <!-- Help Section -->
+      <section id="help" class="content-section">
+        <h1 class="section-title">Help & Support</h1>
+        <p style="color: #666; font-size: 18px;">Help documentation and support resources will be available here.</p>
+      </section>
+
+      <!-- Profile Section -->
+      <section id="profile" class="content-section">
+        <h1 class="section-title">Profile</h1>
+        <p style="color: #666; font-size: 18px;">User profile settings and account information will be displayed here.</p>
+      </section>
+    </main>
+  </div>
+
+  <script>
+const API_BASE = "http://10.86.240.105:3000";
+    // Section Navigation
+    function showSection(sectionId) {
+      // Hide all sections
+      document.querySelectorAll('.content-section').forEach(section => {
+        section.classList.remove('active');
+      });
+
+      // Remove active class from all sidebar items
+      document.querySelectorAll('.sidebar-menu-item').forEach(item => {
+        item.classList.remove('active');
+      });
+
+      // Show selected section
+      document.getElementById(sectionId).classList.add('active');
+
+      // Add active class to clicked sidebar item
+      event.target.closest('.sidebar-menu-item').classList.add('active');
+    }
+
+    // Check if both selectors are selected
+    function checkSelections() {
+      const cropSelector = document.getElementById('cropSelector');
+      const locationSelector = document.getElementById('locationSelector');
+      const dataManagement = document.getElementById('dataManagement');
+
+      if (cropSelector.value && locationSelector.value) {
+        dataManagement.classList.remove('hidden');
+        // send selected crop to backend
+        setCropOnBackend(cropSelector.value);
+      } else {
+        dataManagement.classList.add('hidden');
+      }
+    }
+
+    async function setCropOnBackend(cropId) {
+      try {
+        await fetch(`${API_BASE}/setCrop?id=${encodeURIComponent(cropId)}`);
+      } catch (err) {
+        console.error('Failed to set crop on backend', err);
+      }
+    }
+
+    async function manualOn() {
+      try {
+        await fetch(`${API_BASE}/manualOn`);
+      } catch (err) {
+        console.error('Failed to send manualOn', err);
+      }
+    }
+
+    async function manualOff() {
+      try {
+        await fetch(`${API_BASE}/manualOff`);
+      } catch (err) {
+        console.error('Failed to send manualOff', err);
+      }
+    }
+
+    async function setModeAuto() {
+      try {
+        await fetch(`${API_BASE}/auto`);
+      } catch (err) {
+        console.error('Failed to set auto mode', err);
+      }
+    }
+
+    // Chart instances
+    let airTempChart, airMoistureChart, soilMoistureChart, soilTempChart;
+    const maxDataPoints = 20;
+
+    // Initialize charts
+    function initializeCharts() {
+      const chartOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: false
+          },
+          tooltip: {
+            enabled: true
+          }
+        },
+        scales: {
+          x: {
+            display: false
+          },
+          y: {
+            beginAtZero: false,
+            grid: {
+              color: 'rgba(0,0,0,0.05)'
+            }
+          }
+        },
+        elements: {
+          point: {
+            radius: 0
+          },
+          line: {
+            borderWidth: 2,
+            tension: 0.4
+          }
+        }
+      };
+
+      // Air Temperature Chart
+      const airTempCtx = document.getElementById('airTempChart').getContext('2d');
+      airTempChart = new Chart(airTempCtx, {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [{
+            data: [],
+            borderColor: '#e74c3c',
+            backgroundColor: 'rgba(231, 76, 60, 0.1)',
+            fill: true
+          }]
+        },
+        options: { ...chartOptions, scales: { ...chartOptions.scales, y: { ...chartOptions.scales.y, min: 0, max: 50 } } }
+      });
+
+      // Air Moisture Chart
+      const airMoistureCtx = document.getElementById('airMoistureChart').getContext('2d');
+      airMoistureChart = new Chart(airMoistureCtx, {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [{
+            data: [],
+            borderColor: '#3498db',
+            backgroundColor: 'rgba(52, 152, 219, 0.1)',
+            fill: true
+          }]
+        },
+        options: { ...chartOptions, scales: { ...chartOptions.scales, y: { ...chartOptions.scales.y, min: 0, max: 100 } } }
+      });
+
+      // Soil Moisture Chart
+      const soilMoistureCtx = document.getElementById('soilMoistureChart').getContext('2d');
+      soilMoistureChart = new Chart(soilMoistureCtx, {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [{
+            data: [],
+            borderColor: '#2ecc71',
+            backgroundColor: 'rgba(46, 204, 113, 0.1)',
+            fill: true
+          }]
+        },
+        options: { ...chartOptions, scales: { ...chartOptions.scales, y: { ...chartOptions.scales.y, min: 0, max: 100 } } }
+      });
+
+      // Soil Temperature Chart
+      const soilTempCtx = document.getElementById('soilTempChart').getContext('2d');
+      soilTempChart = new Chart(soilTempCtx, {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [{
+            data: [],
+            borderColor: '#f39c12',
+            backgroundColor: 'rgba(243, 156, 18, 0.1)',
+            fill: true
+          }]
+        },
+        options: { ...chartOptions, scales: { ...chartOptions.scales, y: { ...chartOptions.scales.y, min: 0, max: 50 } } }
+      });
+    }
+
+    // Update chart with new data point
+    function updateChart(chart, value, label, maxPoints) {
+      chart.data.labels.push(label);
+      chart.data.datasets[0].data.push(value);
+
+      if (chart.data.labels.length > maxPoints) {
+        chart.data.labels.shift();
+        chart.data.datasets[0].data.shift();
+      }
+
+      chart.update('none');
+    }
+
+    // Update pump status based on latest sensor data
+    function updatePumpStatusFromData(soilMoisture, pumpState) {
+      const pumpStatusEl = document.getElementById('pumpStatus');
+      const pumpStatusTextEl = document.getElementById('pumpStatusText');
+      const pumpDurationEl = document.getElementById('pumpDuration');
+      const pumpDurationTextEl = document.getElementById('pumpDurationText');
+
+      const isOn = Number(pumpState) === 1;
+
+      if (isOn) {
+        pumpStatusEl.textContent = 'ON';
+        pumpStatusEl.className = 'pump-status-value on';
+        pumpStatusTextEl.textContent = 'Pump is currently running';
+      } else {
+        pumpStatusEl.textContent = 'OFF';
+        pumpStatusEl.className = 'pump-status-value off';
+        pumpStatusTextEl.textContent = 'Pump is currently not running';
+      }
+
+      if (!isNaN(soilMoisture)) {
+        // Simple recommendation: if soil moisture < 50% recommend irrigation
+        if (soilMoisture < 50) {
+          const deficit = 50 - soilMoisture;
+          const duration = Math.ceil(deficit * 2); // 2 minutes per % deficit
+          pumpDurationEl.textContent = duration + ' min';
+          pumpDurationTextEl.textContent = 'Estimated time to reach optimal moisture';
+        } else {
+          pumpDurationEl.textContent = '0 min';
+          pumpDurationTextEl.textContent = 'No irrigation needed at this time';
+        }
+      } else {
+        pumpDurationEl.textContent = '--';
+        pumpDurationTextEl.textContent = 'Waiting for sensor data';
+      }
+    }
+
+    // Fetch latest sensor data from backend and update UI
+    async function fetchAndUpdateSensorData() {
+      const dataManagement = document.getElementById('dataManagement');
+      if (dataManagement.classList.contains('hidden')) {
+        return; // don't fetch if user hasn't selected crop & location
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/data`);
+        if (!res.ok) {
+          throw new Error('Network response was not ok');
+        }
+        const data = await res.json();
+        // data: { soil, temp, hum, pump, crop }
+        const now = new Date();
+        const timeLabel = now.getHours() + ':' + now.getMinutes().toString().padStart(2, '0');
+
+        const airTemp = Number(data.temp) || 0;
+        const airMoisture = Number(data.hum) || 0;
+        const soilMoisture = Number(data.soil) || 0;
+        const soilTemp = Number(data.soilTemp) || 0; // if you have separate soil temp, you can map it here
+
+        // Update display values
+        document.getElementById('airTemp').textContent = isNaN(airTemp) ? '--' : airTemp.toFixed(1);
+        document.getElementById('airMoisture').textContent = isNaN(airMoisture) ? '--' : airMoisture.toFixed(1);
+        document.getElementById('soilMoisture').textContent = isNaN(soilMoisture) ? '--' : soilMoisture.toFixed(1);
+        document.getElementById('soilTemp').textContent = isNaN(soilTemp) ? '--' : soilTemp.toFixed(1);
+
+        // Initialize charts lazily
+        if (!airTempChart) {
+          initializeCharts();
+        }
+
+        // Update charts
+        if (!isNaN(airTemp)) {
+          updateChart(airTempChart, airTemp, timeLabel, maxDataPoints);
+        }
+        if (!isNaN(airMoisture)) {
+          updateChart(airMoistureChart, airMoisture, timeLabel, maxDataPoints);
+        }
+        if (!isNaN(soilMoisture)) {
+          updateChart(soilMoistureChart, soilMoisture, timeLabel, maxDataPoints);
+        }
+        if (!isNaN(soilTemp)) {
+          updateChart(soilTempChart, soilTemp, timeLabel, maxDataPoints);
+        }
+
+        updatePumpStatusFromData(soilMoisture, data.pump);
+      } catch (err) {
+        console.error('Failed to fetch sensor data', err);
+      }
+    }
+
+    // Start periodic data fetch once DOM is ready
+    document.addEventListener('DOMContentLoaded', () => {
+      // fetch immediately then every 3s
+      fetchAndUpdateSensorData();
+      setInterval(fetchAndUpdateSensorData, 3000);
+    });
+  </script>
+
+</body>
+</html>
