@@ -1,0 +1,97 @@
+﻿#include <ESP8266WiFi.h> #include <espnow.h> #include <ESP8266HTTPClient.h> #include <DHT.h>
+#define DHTPIN D4 #define DHTTYPE DHT11
+DHT dht(DHTPIN,DHTTYPE);
+const char* ssid="Chirag"; const char* password="12345678"; const char* server="http://172.24.88.10:3000/update";
+struct Packet{ uint8_t type; uint8_t index; uint16_t j1x; uint16_t j1y; uint16_t j2x; uint16_t j2y; };
+Packet incoming;
+int pose=0; bool moving=false;
+void sendCmd(const char* cmd){ Serial.println(cmd); Serial1.println(cmd); }
+void handleJoystick(){
+int center=2048; int dead=400;
+if(incoming.j1y > center+dead && !moving){
+moving=true;
+
+if(pose==0) sendCmd("fmove");
+if(pose==1) sendCmd("fmove0");
+if(pose==2) sendCmd("fmove1");
+}
+else if(incoming.j1y < center-dead && !moving){
+moving=true;
+
+if(pose==0) sendCmd("bmove");
+if(pose==1) sendCmd("bmove0");
+if(pose==2) sendCmd("bmove1");
+}
+else if(incoming.j1x > center+dead && !moving){
+moving=true;
+
+if(pose==0) sendCmd("rmove");
+if(pose==1) sendCmd("rmove0");
+if(pose==2) sendCmd("rmove1");
+}
+else if(incoming.j1x < center-dead && !moving){
+moving=true;
+
+if(pose==0) sendCmd("lmove");
+if(pose==1) sendCmd("lmove0");
+if(pose==2) sendCmd("lmove1");
+}
+else if(incoming.j2x > center+dead && !moving){
+moving=true;
+
+if(pose==0) sendCmd("smove");
+if(pose==1) sendCmd("smove0");
+if(pose==2) sendCmd("smove1");
+}
+if(abs(incoming.j1x-center)<dead && abs(incoming.j1y-center)<dead && abs(incoming.j2x-center)<dead){
+moving=false;
+} }
+void onReceive(uint8_t *mac,uint8_t *data,uint8_t len){
+memcpy(&incoming,data,sizeof(incoming));
+if(incoming.type==1){
+if(incoming.index==1){   // SW2
+  sendCmd("hi");
+}
+
+if(incoming.index==6){   // BTN5
+  sendCmd("standneutral");
+  pose=0;
+}
+
+if(incoming.index==8){   // BTN7
+  sendCmd("fullstand");
+  pose=2;
+}
+
+if(incoming.index==9){   // BTN8
+  sendCmd("halfstand");
+  pose=1;
+}
+}
+if(incoming.type==0){ handleJoystick(); } }
+void sendSensor(){
+float t=dht.readTemperature(); float h=dht.readHumidity();
+if(WiFi.status()==WL_CONNECTED){
+WiFiClient client;
+HTTPClient http;
+
+String url=String(server)+
+           "?soil=0&temp="+String(t)+
+           "&hum="+String(h)+
+           "&pump=0&crop=0";
+
+http.begin(client,url);
+http.GET();
+http.end();
+} }
+void setup(){
+Serial.begin(115200); Serial1.begin(115200);
+WiFi.begin(ssid,password);
+while(WiFi.status()!=WL_CONNECTED){ delay(500); }
+dht.begin();
+WiFi.mode(WIFI_STA);
+esp_now_init(); esp_now_set_self_role(ESP_NOW_ROLE_SLAVE); esp_now_register_recv_cb(onReceive); }
+unsigned long lastSensor=0;
+void loop(){
+if(millis()-lastSensor>2000){ sendSensor(); lastSensor=millis(); } }
+

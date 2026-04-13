@@ -1,0 +1,53 @@
+﻿#include <WiFi.h> #include <esp_now.h> #include <ArduinoOTA.h>
+// WIFI for OTA const char* ssid = "Chirag"; const char* password = "12345678";
+// Receiver MAC (NodeMCU) uint8_t receiverMAC[] = {0x5C,0xCF,0x7F,0x6F,0x9D,0x41};
+// --- Joystick Analog Pins --- const int joy1_x_pin = 32; const int joy1_y_pin = 33; const int joy2_x_pin = 34; const int joy2_y_pin = 35;
+// --- Your Pins --- const int NUM_BUTTONS = 10; const int buttonPins[NUM_BUTTONS] = {4,5,18,19,23,27,25,26,14,15};
+const char* buttonNames[NUM_BUTTONS] = { "JOY1_SW","JOY2_SW","BTN1","BTN2", "BTN3","BTN4","BTN5","BTN6","BTN7","BTN8" };
+bool lastState[NUM_BUTTONS];
+unsigned long lastJoySendTime = 0;
+struct Packet{ uint8_t type; uint8_t index; uint16_t j1x; uint16_t j1y; uint16_t j2x; uint16_t j2y; };
+Packet packet;
+void setup(){
+Serial.begin(115200);
+// button init for(int i=0;i<NUM_BUTTONS;i++){ pinMode(buttonPins[i],INPUT_PULLUP); lastState[i]=HIGH; }
+// WiFi for OTA WiFi.mode(WIFI_STA); WiFi.begin(ssid,password);
+while(WiFi.status()!=WL_CONNECTED){ delay(300); }
+Serial.println(WiFi.localIP());
+ArduinoOTA.setHostname("Hexapod_Controller"); ArduinoOTA.begin();
+// ESP-NOW esp_now_init();
+esp_now_peer_info_t peerInfo={}; memcpy(peerInfo.peer_addr,receiverMAC,6); peerInfo.channel=0; peerInfo.encrypt=false; esp_now_add_peer(&peerInfo);
+Serial.println("Controller Ready"); }
+void loop(){
+ArduinoOTA.handle();
+// -------- YOUR MASTER BUTTON LOGIC -------- for(int i=0;i<NUM_BUTTONS;i++){
+bool currentState=digitalRead(buttonPins[i]);
+
+if(currentState==LOW && lastState[i]==HIGH){
+
+  Serial.print("Pressed: ");
+  Serial.println(buttonNames[i]);
+
+  packet.type=1;
+  packet.index=i;
+
+  esp_now_send(receiverMAC,(uint8_t*)&packet,sizeof(packet));
+
+  delay(150);
+}
+
+lastState[i]=currentState;
+}
+// -------- JOYSTICK SEND -------- if(millis()-lastJoySendTime>40){
+packet.type=0;
+
+packet.j1x=analogRead(joy1_x_pin);
+packet.j1y=analogRead(joy1_y_pin);
+packet.j2x=analogRead(joy2_x_pin);
+packet.j2y=analogRead(joy2_y_pin);
+
+esp_now_send(receiverMAC,(uint8_t*)&packet,sizeof(packet));
+
+lastJoySendTime=millis();
+} }
+
